@@ -16,7 +16,7 @@ if st.button("Submit Entry") and user_input:
     with st.spinner("Thinking..."):
         try:
             response = client.chat.completions.create(
-                model="gpt-4.1-2025-04-14",
+                model="gpt-4.1-nano",
                 messages=[
                     {"role": "system", "content": "You're a helpful mood tracking and journaling assistant. Summarize and respond empathetically to the user's emotions."},
                     {"role": "user", "content": user_input}
