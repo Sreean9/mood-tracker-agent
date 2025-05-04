@@ -1,29 +1,28 @@
 import streamlit as st
-from openai import OpenAI
+from transformers import pipeline, set_seed
 
-# Load OpenAI client with API key from Streamlit secrets
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Load Hugging Face text generation pipeline
+@st.cache_resource
+def load_model():
+    gen = pipeline("text-generation", model="distilgpt2")
+    set_seed(42)
+    return gen
 
-# App title and description
+generator = load_model()
+
+# App UI
 st.title("Mood Tracker & Journal Assistant 😊")
-st.write("Reflect on your day, and let me help you journal your thoughts.")
+st.write("Reflect on your day — get a warm journaling suggestion in return.")
 
 # User input
 user_input = st.text_area("How are you feeling today?", height=150)
 
-# Submit button
+# Submit
 if st.button("Submit Entry") and user_input:
     with st.spinner("Thinking..."):
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You're a helpful mood tracking and journaling assistant. Summarize and respond empathetically to the user's emotions."},
-                    {"role": "user", "content": user_input}
-                ]
-            )
-            journal_entry = response.choices[0].message.content
-            st.subheader("Your Journal Entry ✍️")
-            st.write(journal_entry)
-        except Exception as e:
-            st.error(f"Something went wrong: {e}")
+        prompt = f"User journal entry: {user_input}\nAI reflective response:"
+        result = generator(prompt, max_length=150, num_return_sequences=1)[0]["generated_text"]
+        # Remove the original input from the result
+        cleaned = result.replace(prompt, "").strip()
+        st.subheader("Your Journal Entry ✍️")
+        st.write(cleaned)
