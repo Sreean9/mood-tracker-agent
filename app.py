@@ -1,28 +1,33 @@
 import streamlit as st
-from transformers import pipeline, set_seed
+import requests
 
-# Load Hugging Face text generation pipeline
-@st.cache_resource
-def load_model():
-    gen = pipeline("text-generation", model="distilgpt2")
-    set_seed(42)
-    return gen
+HF_TOKEN = st.secrets["HF_TOKEN"]
+API_URL = "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct"
 
-generator = load_model()
+headers = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
 
-# App UI
-st.title("Mood Tracker & Journal Assistant 😊")
-st.write("Reflect on your day — get a warm journaling suggestion in return.")
+def query(payload):
+    response = requests.post(API_URL, headers=headers, json=payload)
+    return response.json()
 
-# User input
+# UI
+st.title("Mood Tracker & Journal Assistant 🧠")
+st.write("Express yourself — let the AI reflect with empathy and insight.")
+
 user_input = st.text_area("How are you feeling today?", height=150)
 
-# Submit
 if st.button("Submit Entry") and user_input:
     with st.spinner("Thinking..."):
-        prompt = f"User journal entry: {user_input}\nAI reflective response:"
-        result = generator(prompt, max_length=150, num_return_sequences=1)[0]["generated_text"]
-        # Remove the original input from the result
-        cleaned = result.replace(prompt, "").strip()
-        st.subheader("Your Journal Entry ✍️")
-        st.write(cleaned)
+        prompt = f"You are an emotional wellbeing assistant. Reflect on this journal entry with care and insight:\n\n{user_input}\n\nResponse:"
+        output = query({
+            "inputs": prompt,
+            "parameters": {"max_new_tokens": 150, "temperature": 0.7}
+        })
+        try:
+            result = output[0]["generated_text"].split("Response:")[-1].strip()
+            st.subheader("Your Journal Entry ✍️")
+            st.write(result)
+        except Exception as e:
+            st.error(f"Failed to generate: {e}")
